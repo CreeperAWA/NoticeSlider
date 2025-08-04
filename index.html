@@ -44,67 +44,53 @@
       color: white;
     }
 
-    /* 消息提醒栏 - 宽度100%，无圆角 */
-    .message-bar {
+    /* 消息提醒栏 */
+    #root {
       position: absolute;
       top: 50px;
       left: 0;
       width: 100%;
-      height: 80px;
-      background: rgba(0, 0, 0, 0.9);
-      border-radius: 0;
-      display: flex;
-      align-items: center;
-      overflow: hidden;
-      padding: 0 20px;
-      box-sizing: border-box;
       z-index: 100;
     }
-
-    .message-icon {
-      width: 40px;
-      height: 40px;
+    
+    .main-content {
+      display: flex;
+      padding: 0 93px;
+      height: 128px;
+      line-height: 128px;
+      background: rgba(0, 0, 0, 0.6);
+    }
+    
+    .label {
+      width: 305px;
+      padding-left: 65px;
       background: url('./s↑b↓.svg') no-repeat center;
-      background-size: contain;
-      margin-right: 15px;
+      color: #3b9fdc;
+      position: relative;
+      z-index: 2;
+      font-size: 48px;
     }
-
-    .message-label {
-      color: #00aaff;
-      font-size: 36px;
-      font-weight: bold;
-      margin-right: 15px;
-      white-space: nowrap;
-    }
-
-    .message-content {
+    
+    .message {
       flex: 1;
       overflow: hidden;
-    }
-
-    /* 滚动文字：初始隐藏 */
-    .message-scroll {
       white-space: nowrap;
-      color: white;
-      font-size: 36px;
-      line-height: 1;
-      opacity: 0;
-      transition: opacity 0.8s ease-in-out;
+      color: #fff;
+      position: relative;
+      height: 100%;
+      z-index: 1;
     }
-
-    /* 淡入效果 */
-    .message-scroll.show {
-      opacity: 1;
-    }
-
-    /* 滚动动画 */
-    @keyframes scrollLeft {
-      from { transform: translateX(100%); }
-      to   { transform: translateX(-100%); }
-    }
-
-    .message-scroll.scroll-start {
-      animation: scrollLeft 56s linear;
+    
+    #message-slider-box {
+      position: absolute;
+      height: 100%;
+      line-height: 128px;
+      font-size: 48px;
+      font-weight: normal;
+      will-change: auto;
+      transform-style: preserve-3d;
+      backface-visibility: hidden;
+      perspective: 1000;
     }
 
     /* 横屏提示 */
@@ -168,12 +154,11 @@
   <div class="fullscreen-bg"></div>
 
   <!-- 消息提醒栏 -->
-  <div class="message-bar">
-    <div class="message-icon"></div>
-    <div class="message-label">消息提醒：</div>
-    <div class="message-content">
-      <div class="message-scroll">
-        无人扶我青云志，我自踏雪至山巅。若是命中无此运，亦可孤身登昆仑。红尘赠我三尺剑，酒看瘦马一世街。世人朝路乃绝涧，独见众生止步前。海到尽头天作岸，山登绝顶我为峰。如若东山能再起，大鹏展翅九万里。一入红尘梦易真，一朝悟透心境名。一朝悟道见真我，昔日枷锁皆云烟。天门将至百运开，拂尘轻笑问仙来。
+  <div id="root">
+    <div class="main-content">
+      <div class="label">消息提醒：</div>
+      <div class="message">
+        <div id="message-slider-box"></div>
       </div>
     </div>
   </div>
@@ -194,16 +179,43 @@
     </div>
   </div>
 
-  <!-- 背景音乐 -->
-  <audio id="bgMusic" loop>
-    <source src="./jl.mp3" type="audio/mpeg">
-  </audio>
+  <!-- 背景音乐 - 动态src -->
+  <audio id="bgMusic" loop></audio>
 
   <script>
     const container = document.getElementById('container');
     const tip = document.getElementById('orientation-tip');
     const bgMusic = document.getElementById('bgMusic');
-    let isAudioTipShown = false; // 防止重复提示
+    const messageSliderBox = document.getElementById('message-slider-box');
+    let isAudioTipShown = false;
+    let animationFrameId = null;
+    let positionLeft = 0;
+    let speed = 200; // 与 SSA 原版保持一致的速度
+    let isScrollInitialized = false;
+    let isAnimationRunning = false;
+    
+    // 添加egg变量、自定义消息和自定义音乐 - 检查URL参数
+    const urlParams = new URLSearchParams(window.location.search);
+    const egg = urlParams.get('zhaoshuo') === 'shuoshu';
+    const customMessage = urlParams.get('message');
+    const customMusic = urlParams.get('music');
+
+    // 设置背景音乐源
+    if (customMusic) {
+      // 解码URL参数
+      const musicSrc = decodeURIComponent(customMusic);
+      // 创建source元素
+      const source = document.createElement('source');
+      source.src = musicSrc;
+      source.type = 'audio/mpeg';
+      bgMusic.appendChild(source);
+    } else {
+      // 默认音乐
+      const source = document.createElement('source');
+      source.src = './jl.mp3';
+      source.type = 'audio/mpeg';
+      bgMusic.appendChild(source);
+    }
 
     // 缩放适配
     function resize() {
@@ -229,12 +241,83 @@
       container.style.transform = `scale(${scale})`;
     }
 
+    // 初始化消息滚动
+    function initMessageScroll() {
+      // 防止重复初始化
+      if (isScrollInitialized) return;
+      isScrollInitialized = true;
+      
+      const messageContent = document.createElement('span');
+      messageContent.style.marginRight = '150px';
+      messageContent.style.fontWeight = 'normal';
+      messageContent.style.color = '#fff';
+      
+      // 根据参数决定显示什么内容（优先级：自定义消息 > egg > 默认消息）
+      if (customMessage) {
+        // 解码URL参数，确保特殊字符正确显示
+        messageContent.textContent = decodeURIComponent(customMessage);
+      } else if (egg) {
+        messageContent.textContent = "某中学物理老师，曾于2024年11月10日为全校希沃一体机安装希沃管家 名言：「这是你的私人财产吗？」 「谁给火绒设的密码？」 「这个得请希沃的工程师来给这个希沃做恢复。」";
+      } else {
+        messageContent.textContent = "无人扶我青云志，我自踏雪至山巅。若是命中无此运，亦可孤身登昆仑。红尘赠我三尺剑，酒看瘦马一世街。世人朝路乃绝涧，独见众生止步前。海到尽头天作岸，山登绝顶我为峰。如若东山能再起，大鹏展翅九万里。一入红尘梦易真，一朝悟透心境名。一朝悟道见真我，昔日枷锁皆云烟。天门将至百运开，拂尘轻笑问仙来。";
+      }
+      
+      messageSliderBox.innerHTML = '';
+      messageSliderBox.appendChild(messageContent);
+      
+      // 使用双重requestAnimationFrame确保DOM完全渲染
+      requestAnimationFrame(() => {
+        // 从屏幕右侧开始，确保完全在屏幕外
+        positionLeft = window.innerWidth;
+        messageSliderBox.style.transform = `translateX(${positionLeft}px)`;
+        
+        // 再次使用requestAnimationFrame确保位置已应用
+        requestAnimationFrame(() => {
+          // 确保位置再次确认
+          positionLeft = window.innerWidth;
+          messageSliderBox.style.transform = `translateX(${positionLeft}px)`;
+          
+          // 延迟1帧启动滚动，确保初始位置稳定
+          setTimeout(() => {
+            startMessageScroll();
+          }, 16);
+        });
+      });
+    }
+
+    // 启动消息滚动
+    function startMessageScroll() {
+      if (isAnimationRunning) {
+        cancelAnimationFrame(animationFrameId);
+      }
+      
+      isAnimationRunning = true;
+      
+      // 重置位置到屏幕右侧（双重保险）
+      positionLeft = window.innerWidth;
+      messageSliderBox.style.transform = `translateX(${positionLeft}px)`;
+      
+      function animate() {
+        // 实时获取容器宽度
+        const containerWidth = messageSliderBox.offsetWidth;
+        
+        positionLeft -= speed / 60; // 每帧移动的距离
+        messageSliderBox.style.transform = `translateX(${positionLeft}px)`;
+        
+        // 如果消息已经完全移出屏幕左侧，重置到右侧
+        if (positionLeft + containerWidth < 0) {
+          positionLeft = window.innerWidth;
+        }
+        
+        animationFrameId = requestAnimationFrame(animate);
+      }
+      
+      animate();
+    }
+
     // ✅ 封装：启动滚动文字（在音乐播放成功后调用）
     function startScrollText() {
-      setTimeout(() => {
-        const scrollText = document.querySelector('.message-scroll');
-        scrollText.classList.add('show', 'scroll-start');
-      }, 2000);
+      initMessageScroll();
     }
 
     // 显示音频播放失败提示
@@ -259,6 +342,8 @@
           document.body.removeChild(audioTip);
         }
         isAudioTipShown = false;
+        isScrollInitialized = false; // 重置滚动初始化状态
+        isAnimationRunning = false; // 重置动画状态
 
         bgMusic.play()
           .then(() => {
@@ -300,7 +385,17 @@
     });
 
     // 窗口变化
-    window.addEventListener('resize', resize);
+    window.addEventListener('resize', () => {
+      resize();
+      
+      // 重置滚动位置
+      if (isScrollInitialized) {
+        const containerWidth = messageSliderBox.offsetWidth;
+        positionLeft = window.innerWidth;
+        messageSliderBox.style.transform = `translateX(${positionLeft}px)`;
+      }
+    });
+    
     window.addEventListener('orientationchange', () => {
       setTimeout(resize, 300);
     });
