@@ -1,6 +1,30 @@
-> **提示 IMPORTANT**
-> 
-> 1. 请使用 Chromium 内核浏览器（如 `Microsoft Edge`、`Google Chrome`）打开本网页；Please use a Chromium-based browser (such as `Microsoft Edge` or `Google Chrome`) to open this webpage;
-> 2. 打开`index.html`后，若网页下方提示 `背景音乐自动播放失败`，请点击屏幕任意位置，音乐即可开始播放；After opening `index.html`, if a message appears at the bottom of the page stating `背景音乐自动播放失败`, please tap anywhere on the screen to start the music playback;
-> 3. 本项目的修改与再发布需遵循MIT许可，不得侵犯原作者的合法权利；Any modifications and redistribution of this project must comply with the MIT License, 和 the original author's legal rights must not be infringed; 
-> 4. 原作者`SXZ11454`保留对该项目的所有权利。The original author `SXZ11454` reserves all rights to this project.
+# NoticeSlider 通知滑动展示项目
+
+## 🎯 项目简介
+一个结合视觉动画与背景音乐的网页交互体验应用，通过动态滑动通知栏和音频播放功能，解决网页端通知信息展示与音频自动播放兼容性问题。
+
+## 🧩 核心功能
+- **动态通知栏**：实现平滑滚动的通知信息展示效果
+- **音频交互**：集成背景音乐播放控制（需用户首次点击激活）
+- **跨浏览器支持**：专为 Chromium 内核浏览器优化（Edge/Chrome）
+
+## 🛠 技术架构
+- **前端技术**：HTML5 + CSS3 + JavaScript
+- **运行环境**：Chromium 内核浏览器（自动播放策略限制）
+- **部署方式**：静态网页直传服务器即可运行
+
+## 📦 使用说明
+1. 使用 Chromium 内核浏览器打开 `index.html`
+2. 加载后若浏览器允许，音乐会自动播放，若未播放请点击屏幕任意位置激活音乐播放，一切活动只有在音乐播放后才会执行
+3. 支持通过URL参数自定义功能：
+   - `?music=音频地址` 自定义背景音乐
+   - `?message=通知内容` 自定义通知文本
+
+## ⚠ 已知问题
+- 浏览器安全策略导致自动播放失败时，请点击页面任意位置恢复播放
+
+## 📄 许可协议
+MIT License - 允许修改和二次分发（需保留原作者声明）
+
+## 🌐 演示DEMO地址
+[演示DEMO地址](https://noticeslider-swsvcassistant.pages.dev/)
