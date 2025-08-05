@@ -367,15 +367,50 @@
 
     // 尝试自动播放音乐
     function autoPlayMusic() {
+      // 添加播放状态确认标志
+      let hasStartedPlaying = false;
+      
       bgMusic.play()
         .then(() => {
           console.log('音乐自动播放成功');
-          startScrollText();
+          // 增加播放状态确认
+          if (!hasStartedPlaying) {
+            hasStartedPlaying = true;
+            startScrollText();
+          }
         })
         .catch(err => {
           console.warn('自动播放被阻止:', err);
+          // 新增播放状态检测
+          if (bgMusic.currentTime > 0 && !bgMusic.paused && !bgMusic.ended) {
+            console.log('音乐已实际播放，忽略错误');
+            if (!hasStartedPlaying) {
+              hasStartedPlaying = true;
+              startScrollText();
+            }
+            return;
+          }
+          // 原有错误处理逻辑
           showAudioTip();
         });
+
+      // 新增播放状态监听器作为双重保障
+      bgMusic.addEventListener('playing', () => {
+        console.log('播放事件触发');
+        if (!hasStartedPlaying) {
+          hasStartedPlaying = true;
+          startScrollText();
+        }
+      });
+
+      // 新增时间更新监听器处理卡顿情况
+      bgMusic.addEventListener('timeupdate', () => {
+        if (!hasStartedPlaying && bgMusic.currentTime > 0) {
+          console.log('检测到播放进度，确认播放状态');
+          hasStartedPlaying = true;
+          startScrollText();
+        }
+      });
     }
 
     // 页面加载时立即尝试自动播放
